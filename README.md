@@ -4,9 +4,12 @@
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+This repository is created for the seminar work for the project self-supervised transformers for sparse time series data together with Oleksandr Nikolskyy.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Initial structure: Three folders namely
+1. References contains the literature we will go through
+2. Code produces for the project
+3. Write-ups any report, presentation or meeting minutes. 
 
 ## Add your files
 
