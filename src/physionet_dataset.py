@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import glob 
 import os
+import torch 
 
 class PhysioNetDataset(Dataset):
     def __init__(self, root_path, dataset_name, freq='10H', write_to_disc=False) -> None:
@@ -104,7 +105,12 @@ class PhysioNetDataset(Dataset):
         lab[~mask] = 0
         pid = self.pid_x[self.pid_index == self.unique_id[idx]]
         
-        return lab, mask, pid
+        # T x 1
+        T = lab.shape[0]
+        # T x 2 x D
+        masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
+
+        return masked_lab, pid, torch.arange(T).unsqueeze(-1).float()
 
         
     def __len__(self):

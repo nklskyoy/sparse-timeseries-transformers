@@ -29,7 +29,7 @@ lab = PhysioNetDataset(
 # %%
 df_lab, df_pid = lab.to_pandas()
 
-lab, mask, pid = lab[0]
+x, pid, T = lab[0]
 
 # expolre the data
 
