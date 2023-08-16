@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 
-def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., activation=nn.ReLU()):
+def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., activation=nn.ReLU, last_layer_activation=nn.ReLU):
     layers = []
     input_dim = input_size
 
@@ -19,7 +19,10 @@ def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., act
 
 
         layers.append(nn.Linear(source_size, target_size))
-        layers.append(nn.ReLU())
+        if _ != num_layers - 1:
+            layers.append(activation())
+        else:
+            layers.append(last_layer_activation())
 
     return nn.Sequential(*layers)
 

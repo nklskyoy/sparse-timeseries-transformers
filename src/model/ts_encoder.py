@@ -16,7 +16,7 @@ class MLPTSencoder(nn.Module):
             output_size, 
             num_layers, 
             dropout=dropout, 
-            activation=nn.ReLU()
+            activation=nn.ReLU
         )
 
 

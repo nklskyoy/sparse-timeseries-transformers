@@ -7,7 +7,7 @@ from torch.nn import BCELoss
 from src.model.tess import Tess, PredictHead
 
 
-class PreTESS(pl.LightningModule):
+class PreTESS():#pl.LightningModule):
     def __init__(
             self, 
             ts_dim, time_embedding_dim,
