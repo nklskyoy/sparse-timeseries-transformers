@@ -7,9 +7,10 @@ import os
 import torch 
 
 class PhysioNetDataset(Dataset):
-    def __init__(self, root_path, dataset_name, freq='10H', write_to_disc=False) -> None:
+    def __init__(self, root_path, dataset_name, freq='10H', write_to_disc=False, device=torch.device('cpu')) -> None:
         self.root_path = root_path
-        
+        self.device = device
+
         data_path = os.path.join(root_path['data'], "{name}_{freq}".format(name=dataset_name, freq=freq))
         if os.path.exists(data_path) and not write_to_disc:
             # if the data is already saved, load it
@@ -103,14 +104,19 @@ class PhysioNetDataset(Dataset):
         lab = from_numpy(lab.astype(np.float32))
         mask = ~lab.isnan()
         lab[~mask] = 0
+
         pid = self.pid_x[self.pid_index == self.unique_id[idx]]
-        
+        pid = from_numpy(pid.astype(np.float32))
+
         # T x 1
         T = lab.shape[0]
         # T x 2 x D
         masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
 
-        return masked_lab, pid, torch.arange(T).unsqueeze(-1).float()
+        return  \
+            masked_lab.to(self.device),\
+            pid.to(self.device),\
+            torch.arange(T, device=self.device).unsqueeze(-1).float()
 
         
     def __len__(self):
