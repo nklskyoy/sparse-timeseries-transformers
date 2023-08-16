@@ -8,7 +8,7 @@
             "name": "Python: Module",
             "type": "python",
             "request": "launch",
-            "module": "src.debug.tess_simple_forward",
+            "module": "src.debug.tess_pretess",
             "justMyCode": true
         },
         {

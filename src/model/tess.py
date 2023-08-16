@@ -2,7 +2,7 @@ from torch import nn
 from src.model.ts_encoder import MLPTSencoder, TimeEmbedding
 import torch
 from src.model.model_util import make_dense
-
+from torch.nn.functional import sigmoid,tanh
 
 
 
@@ -15,7 +15,10 @@ class PredictHead(nn.Module):
 
     def forward(self, z):
         y = self.dense_obs(z)
+        y = tanh(y)
+
         m = self.dense_mask(z)
+        m = sigmoid(m)
         return y, m
 
 
@@ -40,13 +43,17 @@ class Tess(nn.Module):
         self.time_embedding = TimeEmbedding(dim=ts_encoder_hidden_size)
 
         self.mha = nn.MultiheadAttention(
-            embed_dim=ts_encoder_hidden_size, num_heads=n_heads, dropout=0.1
+            embed_dim=ts_encoder_hidden_size, 
+            num_heads=n_heads,
+            dropout=0.1, 
+            batch_first=False
         )
 
 
-    def forward(self, x, t):
+    def forward(self, x, t, mask=None):
         # x : B x T x 2 x D
         # t : B x T x 1
+        # mask : B x T x 1 tensor with 0. and 1.
 
         # encode time series
         x = self.ts_encoder(x)
@@ -55,8 +62,12 @@ class Tess(nn.Module):
         x = x + t
 
         # apply multihead attention
-        x = x.permute(1, 0, 2)
+#        x = x.permute(1, 0, 2)
         x, _ = self.mha(x, x, x)
+
+        if mask is not None:
+            masked_values = torch.full_like(x, -2)
+            x = mask * x + (1 - mask) * masked_values
 
         return x
     

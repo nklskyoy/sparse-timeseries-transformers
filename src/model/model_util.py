@@ -1,5 +1,5 @@
 from torch import nn
-
+import torch
 
 def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., activation=nn.ReLU()):
     layers = []
@@ -22,3 +22,23 @@ def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., act
         layers.append(nn.ReLU())
 
     return nn.Sequential(*layers)
+
+
+def mask_token(dim):
+    return torch.full(dim, -10.)
+
+
+
+
+class PredictHead(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(PredictHead, self).__init__()
+        pass
+
+
+    def forward(self, z):
+        y = self.dense_obs(z)
+        m = self.dense_mask(z)
+        return y, m
+    
+
