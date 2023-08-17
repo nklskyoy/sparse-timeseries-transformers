@@ -5,20 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Module",
+            "name": "physionet",
             "type": "python",
             "request": "launch",
-            "module": "src.debug.tess_pretess",
+            "module": "src.debug.physionet",
             "justMyCode": true
         },
         {
-            "name": "Python: Current File",
+            "name": "physionet_collate",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "cwd": ""
-        }
+            "module": "src.debug.physionet_collate",
+            "justMyCode": true
+        },
     ]
 }

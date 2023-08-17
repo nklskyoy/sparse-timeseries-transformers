@@ -7,20 +7,35 @@ import os
 import torch 
 
 
+def collate_on_device(device):
+    def collate_fn(batch):
+        # Get the max length in this batch
+        max_length = max([x[0].shape[0] for x in batch])
+        D = batch[0][0].shape[2]
+        
+        n_static_features = batch[0][1].shape[1]
 
-def collate_fn(batch):
-    # Get the max length in this batch
-    max_length = max([x[0].shape[0] for x in batch])
-    D = batch[0][0].shape[2]
-    
-    # Create a tensor filled with NaNs
-    padded_batch = torch.full((len(batch), max_length,2, D), 0.)
-    
-    # Copy over the actual sequences
-    for i, sequence in enumerate(batch):
-        padded_batch[i, :sequence.shape[0],: , :] = sequence
+        # Create a tensor filled with NaNs
+        lab = torch.full(
+            (len(batch), max_length,2, D), 
+            0., device=device)
+        pid = torch.full(
+            (len(batch), n_static_features), 0., 
+            device=device)
 
-    return padded_batch
+        T = torch.arange(max_length, device=device).unsqueeze(-1).float()
+        T = T.repeat(len(batch), 1,1)
+
+        # Copy over the actual sequences
+        for i, sequence in enumerate(batch):
+            cur_lab = sequence[0]
+            cur_pid = sequence[1]
+
+            lab[i, :cur_lab.shape[0],: , :] = cur_lab
+            pid[i, :] = cur_pid
+
+        return lab, pid, T
+    return collate_fn 
 
 
 

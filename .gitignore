@@ -3,3 +3,5 @@ data/*
 reports/*
 !reports/.gitkeep
 **/__pycache__
+lightning_logs/
+```
