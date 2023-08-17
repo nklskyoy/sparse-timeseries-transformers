@@ -6,6 +6,24 @@ import glob
 import os
 import torch 
 
+
+
+def collate_fn(batch):
+    # Get the max length in this batch
+    max_length = max([x[0].shape[0] for x in batch])
+    D = batch[0][0].shape[2]
+    
+    # Create a tensor filled with NaNs
+    padded_batch = torch.full((len(batch), max_length,2, D), 0.)
+    
+    # Copy over the actual sequences
+    for i, sequence in enumerate(batch):
+        padded_batch[i, :sequence.shape[0],: , :] = sequence
+
+    return padded_batch
+
+
+
 class PhysioNetDataset(Dataset):
     def __init__(self, root_path, dataset_name, freq='10H', write_to_disc=False, device=torch.device('cpu')) -> None:
         self.root_path = root_path
@@ -69,6 +87,9 @@ class PhysioNetDataset(Dataset):
                 .resample(freq) \
                 .aggregate(np.mean) \
                 .reset_index()
+            
+            # adjust Time column such that every timeseries starts with 0:00:00
+            lab['Time'] = lab.groupby('ID')['Time'].transform(lambda x: x - x.min())
 
             # save attributes
             self.lab_x = lab.drop(['ID', 'Time'], axis=1).to_numpy()
@@ -120,5 +141,6 @@ class PhysioNetDataset(Dataset):
 
         
     def __len__(self):
-        return len(self.lab.index.get_level_values(0).unique())
+        return self.pid_x.shape[0]
+
 
