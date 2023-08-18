@@ -7,8 +7,12 @@ import os
 import torch 
 
 
-def collate_on_device(device):
-    def collate_fn(batch):
+class CollateFn:
+    def __init__(self, device=torch.device('cpu')) -> None:
+        self.device = device
+
+    def __call__(self, batch):
+        device = self.device
         # Get the max length in this batch
         max_length = max([x[0].shape[0] for x in batch])
         D = batch[0][0].shape[2]
@@ -35,7 +39,6 @@ def collate_on_device(device):
             pid[i, :] = cur_pid
 
         return lab, pid, T
-    return collate_fn 
 
 
 
@@ -156,6 +159,6 @@ class PhysioNetDataset(Dataset):
 
         
     def __len__(self):
-        return self.pid_x.shape[0]
+        return self.unique_id.shape[0]
 
 

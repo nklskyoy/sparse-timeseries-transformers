@@ -24,13 +24,16 @@ class PredictHead(nn.Module):
 
 
 class Tess(nn.Module):
-    def __init__(self, 
+    def __init__(self, dataset,
                  ts_dim, time_embedding_dim,
                  ts_encoder_hidden_size=128, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
                  n_heads=8):
         super(Tess, self).__init__()
+        
         self.ts_dim = ts_dim
 
+        self.dataset = dataset
+        
         self.ts_encoder = MLPTSencoder(
             input_size=ts_dim, 
             hidden_size=ts_encoder_hidden_size, 
@@ -65,7 +68,7 @@ class Tess(nn.Module):
         x, _ = self.mha(x, x, x)
 
         if mask is not None:
-            masked_values = torch.full_like(x, -2)
+            masked_values = torch.full_like(x, -2, device=self.dataset.device)
             x = mask * x + (1 - mask) * masked_values
 
         return x

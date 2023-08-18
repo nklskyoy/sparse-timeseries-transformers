@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "pretrain",
+            "type": "python",
+            "request": "launch",
+            "module": "src.debug.pretrain",
+            "justMyCode": true
+        },
+        {
             "name": "physionet",
             "type": "python",
             "request": "launch",
