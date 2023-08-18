@@ -1,7 +1,7 @@
 from torch import nn
 from src.model.ts_encoder import MLPTSencoder, TimeEmbedding
 import torch
-from src.model.model_util import make_dense
+from src.model.model_util import make_dense, make_mha
 from torch.nn.functional import sigmoid,tanh
 
 
@@ -44,12 +44,15 @@ class Tess(nn.Module):
 
         self.time_embedding = TimeEmbedding(dim=ts_encoder_hidden_size)
 
-        self.mha = nn.MultiheadAttention(
-            embed_dim=ts_encoder_hidden_size, 
-            num_heads=n_heads,
-            dropout=0.1, 
-            batch_first=False
+        self.mha = make_mha(
+            n_layers=4,
+            input_size=ts_encoder_hidden_size,
+            rep_size=ts_encoder_hidden_size,
+            n_heads=n_heads,
+            dropout=0.1
         )
+        
+
 
 
     def forward(self, x, t, mask=None):
@@ -65,7 +68,7 @@ class Tess(nn.Module):
 
         # apply multihead attention
 #        x = x.permute(1, 0, 2)
-        x, _ = self.mha(x, x, x)
+        x = self.mha(x)
 
         if mask is not None:
             masked_values = torch.full_like(x, -2, device=self.dataset.device)
