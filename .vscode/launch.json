@@ -25,5 +25,12 @@
             "module": "src.debug.physionet_collate",
             "justMyCode": true
         },
+        {
+            "name": "autograd",
+            "type": "python",
+            "request": "launch",
+            "module": "src.debug.autograd_anomaly",
+            "justMyCode": true
+        },
     ]
 }
