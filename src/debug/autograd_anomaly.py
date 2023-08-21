@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 import torch 
 from torch import autograd
 from torch import nn
-from torch.nn import BCELoss
+from torch.nn import BCELoss, BCEWithLogitsLoss
 from src.model.tess import Tess, PredictHead
 import os
 
@@ -107,8 +107,44 @@ dataloader = DataLoader(lab, batch_size=128, shuffle=True, num_workers=0, collat
 
 # %%
 bce = BCELoss(reduction='none')
+bcell = BCEWithLogitsLoss(reduction='none')
+mse = nn.MSELoss(reduction='none')
 batch = next(iter(dataloader))
+
+
+
+
+# %%
+import torchviz
+x_rec, m_rec, vals, m = model(batch,0)
+torchviz.make_dot(bce(m,m_rec).mean())
+
+# %%
 with autograd.detect_anomaly():
-    inp = torch.rand(10, 10, requires_grad=True)
     x_rec, m_rec, vals, m = model(batch,0)
     bce(m,m_rec).mean().backward()
+
+
+
+
+
+# %%
+def register_hooks(module, grad_list):
+    for name, layer in module.named_children():
+        layer.register_backward_hook(lambda module, grad_input, grad_output: grad_list.append((module, grad_input, grad_output)))
+        register_hooks(layer, grad_list)
+
+grad_list = []
+register_hooks(model, grad_list)
+
+x_rec, m_rec, vals, m = model(batch,0)
+loss = bcell(m,m_rec).mean()
+loss.backward()
+
+for module, grad_input, grad_output in grad_list:
+    print(f"Module: {module}")
+    print(f"Gradient Input: {grad_input}")
+    print(f"Gradient Output: {grad_output}")
+# %%
+
+# %%

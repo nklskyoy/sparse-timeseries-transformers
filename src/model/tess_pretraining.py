@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch 
 from torch import nn
-from torch.nn import BCELoss
+from torch.nn import BCELoss, BCEWithLogitsLoss
 from src.model.tess import Tess, PredictHead
 
 
@@ -14,7 +14,7 @@ class PreTESS(pl.LightningModule):
             ts_encoder_hidden_size=128, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
             n_heads=8,
             prob_mask=0.15,
-            alpha = 0.1,
+            alpha = 0.5,
     ) -> None:
         
         super(PreTESS, self).__init__()
@@ -35,7 +35,7 @@ class PreTESS(pl.LightningModule):
             time_embedding_dim, ts_dim
         )
 
-        self.bce = BCELoss()
+        self.bce = BCEWithLogitsLoss(reduction='none')
 
 
 
@@ -68,11 +68,11 @@ class PreTESS(pl.LightningModule):
         bce = self.bce(m,m_rec)
         mse = (vals - x_rec)**2 * m
 
-        loss = bce + self.alpha * mse.mean()
+        loss = bce.mean() + self.alpha * mse.mean()
         #loss = self.head(x_hat, y)
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         return optimizer

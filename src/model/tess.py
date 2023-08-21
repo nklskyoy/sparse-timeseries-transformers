@@ -10,7 +10,7 @@ class PredictHead(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(PredictHead, self).__init__()
         self.dense_obs = make_dense(in_channels, hidden_size= 128, output_size=out_channels,num_layers=1)
-        self.dense_mask = make_dense(in_channels, hidden_size= 128, output_size=out_channels,num_layers=1, last_layer_activation=nn.Sigmoid)
+        self.dense_mask = make_dense(in_channels, hidden_size= 128, output_size=out_channels,num_layers=1, last_layer_activation=nn.Identity)
 
 
     def forward(self, z):
