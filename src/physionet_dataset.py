@@ -130,6 +130,7 @@ class PhysioNetDataset(Dataset):
         
         # for convenience
         self.unique_id = np.unique(self.lab_index)
+        self.ts_dim = self.lab_x.shape[1]
 
 
     def to_pandas(self):

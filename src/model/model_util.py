@@ -77,7 +77,7 @@ class MHA(nn.Module):
         v = self.v(x)
 
         # B x T x D
-        x, _ = self.mha(q, k, v, key_padding_mask=mask)
+        x, _ = self.mha(q, k, v)
 
         x = self.o(x)
         x = self.layer_norm(x)

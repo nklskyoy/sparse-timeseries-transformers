@@ -4,4 +4,5 @@ reports/*
 !reports/.gitkeep
 **/__pycache__
 lightning_logs/
+tb_logs/
 ```

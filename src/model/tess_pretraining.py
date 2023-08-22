@@ -5,6 +5,9 @@ import torch
 from torch import nn
 from torch.nn import BCELoss, BCEWithLogitsLoss
 from src.model.tess import Tess, PredictHead
+from pytorch_lightning.utilities import grad_norm
+
+
 
 
 class PreTESS(pl.LightningModule):
@@ -14,7 +17,7 @@ class PreTESS(pl.LightningModule):
             ts_encoder_hidden_size=128, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
             n_heads=8,
             prob_mask=0.15,
-            alpha = 0.5,
+            alpha = 0.2,
     ) -> None:
         
         super(PreTESS, self).__init__()
@@ -28,7 +31,10 @@ class PreTESS(pl.LightningModule):
             n_heads
         )
 
+        D = self.dataset.ts_dim
+        self.mask = nn.Parameter(torch.ones(time_embedding_dim, 1))
         self.prob_mask = prob_mask
+        
         self.alpha = alpha
 
         self.head = PredictHead(
@@ -59,6 +65,13 @@ class PreTESS(pl.LightningModule):
 
         return is_masked.to(self.dataset.device)
 
+    def on_before_optimizer_step(self, optimizer):
+        # Compute the 2-norm for each layer
+        # If using mixed precision, the gradients are already unscaled here
+        norms = grad_norm(self.tess, norm_type=2)
+        self.log_dict(norms)
+        norms = grad_norm(self.head, norm_type=2)
+        self.log_dict(norms)
 
     def training_step(self, batch, batch_idx):
         # batch: B x T x 2 x D
@@ -76,16 +89,16 @@ class PreTESS(pl.LightningModule):
         is_masked_float = is_masked.float().unsqueeze(-1)
 
         # B x T x D_emb
-        x_hat = self.tess(lab, timesteps, is_masked_float)
+        x_hat = self.tess(lab, timesteps, is_masked_float, self.mask)
         vals_pred, spm_pred = self.head(x_hat)
         
         #x_rec = x_rec * mask
         #m_rec = m_rec * mask
 
-        bce = self.bce(spm, spm_pred) * is_masked_float
-        mse = (vals - vals_pred)**2 * spm * is_masked_float
+        bce = self.bce(spm_pred,spm) #* is_masked_float
+        mse = (vals - vals_pred)**2 #* spm #* is_masked_float
 
-        loss = mse + bce * self.alpha 
+        loss =  mse + bce * self.alpha 
         loss_per_bin = loss.mean(dim=-1)
         loss_per_pat = loss_per_bin.sum(dim=-1) /is_masked.sum(-1)
 
@@ -96,5 +109,5 @@ class PreTESS(pl.LightningModule):
         return loss
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer 
