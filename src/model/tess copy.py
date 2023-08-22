@@ -15,7 +15,7 @@ class PredictHead(nn.Module):
 
     def forward(self, z):
         y = self.dense_obs(z)
-        #y = tanh(y)
+        y = tanh(y)
 
         m = self.dense_mask(z)
         return y, m
@@ -39,19 +39,20 @@ class Tess(nn.Module):
             hidden_size=ts_encoder_hidden_size, 
             output_size=time_embedding_dim,
             num_layers=ts_encoder_num_layers, 
-            dropout=ts_encoder_dropout
+            dropout=0.1
         )
 
         self.time_embedding = TimeEmbedding(dim=ts_encoder_hidden_size)
-
 
         self.mha = make_mha(
             n_layers=4,
             input_size=ts_encoder_hidden_size,
             rep_size=ts_encoder_hidden_size,
             n_heads=n_heads,
-            dropout=0.2
+            dropout=0.1
         )
+        
+
 
 
     def forward(self, x, t, is_masked=None, mask=None):
