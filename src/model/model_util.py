@@ -61,7 +61,10 @@ class MHA(nn.Module):
 
         self.o = make_dense(rep_size, rep_size, rep_size, 1, dropout=dropout, last_layer_activation=nn.Identity)
 
-        self.layer_norm = nn.LayerNorm(rep_size)
+        self.layer_norm1 = nn.LayerNorm(rep_size)
+        self.layer_norm2 = nn.LayerNorm(rep_size)
+
+        self.ff = make_dense(rep_size, rep_size, rep_size, 2, dropout=dropout, last_layer_activation=nn.ReLU)
 
 
     def forward(self, x, mask=None):
@@ -77,12 +80,17 @@ class MHA(nn.Module):
         v = self.v(x)
 
         # B x T x D
-        x, _ = self.mha(q, k, v)
+        step1, _ = self.mha(q, k, v)
 
-        x = self.o(x)
-        x = self.layer_norm(x)
+        step1 = self.o(step1)
+        step1 = step1 + x         # residual
+        step1 = self.layer_norm1(step1)
 
-        return x
+        step2 = self.ff(step1)
+        step2 = step2 + step1     # residual
+        step2 = self.layer_norm2(step2)
+
+        return step2
 
 
 

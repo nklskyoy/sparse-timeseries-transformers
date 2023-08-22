@@ -42,13 +42,13 @@ class Tess(nn.Module):
             dropout=ts_encoder_dropout
         )
 
-        self.time_embedding = TimeEmbedding(dim=ts_encoder_hidden_size)
+        self.time_embedding = TimeEmbedding(dim=time_embedding_dim)
 
 
         self.mha = make_mha(
             n_layers=4,
-            input_size=ts_encoder_hidden_size,
-            rep_size=ts_encoder_hidden_size,
+            input_size=time_embedding_dim,
+            rep_size=time_embedding_dim,
             n_heads=n_heads,
             dropout=0.2
         )
