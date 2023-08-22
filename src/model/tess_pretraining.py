@@ -39,8 +39,25 @@ class PreTESS(pl.LightningModule):
 
 
 
-    def get_masked(self,shape):
-        return torch.bernoulli(torch.full(shape, 1- self.prob_mask)).to(self.dataset.device)
+    def select_random_timesteps(self,shape):
+        B, T = shape
+        # How many timesteps to select
+        t = int(T * self.prob_mask) 
+
+        # Select t random timesteps
+        # Generate a random tensor of shape B x T
+        random_values = torch.rand(B, T)
+
+        # Argsort along the time dimension to get the permutation indices
+        _, idx = random_values.sort(dim=1)
+        idx = idx[:, :t]
+        idx,_ = idx.sort(dim=1)
+        is_masked = torch.full((B,T), False)
+        rows = torch.arange(B).unsqueeze(-1).expand_as(idx)
+        is_masked[rows, idx] = True
+        # Use the first t columns as the indices
+
+        return is_masked.to(self.dataset.device)
 
 
     def training_step(self, batch, batch_idx):
@@ -49,30 +66,35 @@ class PreTESS(pl.LightningModule):
         pid = batch[1]
         timesteps = batch[2]
 
-        m = lab[:,:,1,:]
+        spm = lab[:,:,1,:]
         vals = lab[:,:,0,:]
 
         B,T,_,_ = lab.shape
 
-        mask = self.get_masked((B,T,1))
-        #mask_bool = mask.int().bool()
+        # True if masked
+        is_masked = self.select_random_timesteps((B,T))
+        is_masked_float = is_masked.float().unsqueeze(-1)
 
         # B x T x D_emb
-        x_hat = self.tess(lab,timesteps,mask)
-        x_rec, m_rec = self.head(x_hat)
-        x_rec = x_rec * mask
-        m_rec = m_rec * mask
+        x_hat = self.tess(lab, timesteps, is_masked_float)
+        vals_pred, spm_pred = self.head(x_hat)
+        
+        #x_rec = x_rec * mask
+        #m_rec = m_rec * mask
 
+        bce = self.bce(spm, spm_pred) * is_masked_float
+        mse = (vals - vals_pred)**2 * spm * is_masked_float
 
-        # TODO : is this averaging correct?
-        bce = self.bce(m,m_rec)
-        mse = (vals - x_rec)**2 * m
+        loss = mse + bce * self.alpha 
+        loss_per_bin = loss.mean(dim=-1)
+        loss_per_pat = loss_per_bin.sum(dim=-1) /is_masked.sum(-1)
 
-        loss = bce.mean() + self.alpha * mse.mean()
+        loss = loss_per_pat.mean()
+        
         #loss = self.head(x_hat, y)
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
-        return optimizer
+        return optimizer 

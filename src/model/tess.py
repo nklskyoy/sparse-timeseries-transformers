@@ -55,7 +55,7 @@ class Tess(nn.Module):
 
 
 
-    def forward(self, x, t, mask=None):
+    def forward(self, x, t, is_masked=None):
         # x : B x T x 2 x D
         # t : B x T x 1
         # mask : B x T x 1 tensor with 0. and 1.
@@ -66,13 +66,12 @@ class Tess(nn.Module):
 
         x = x + t
 
-        # apply multihead attention
-#        x = x.permute(1, 0, 2)
-        x = self.mha(x)
+        if is_masked is not None:
+            mask = torch.full_like(x, -2, device=self.dataset.device)
+            x = (1 - is_masked) * x + is_masked * mask
 
-        if mask is not None:
-            masked_values = torch.full_like(x, -2, device=self.dataset.device)
-            x = mask * x + (1 - mask) * masked_values
+        # apply multihead attention
+        x = self.mha(x)
 
         return x
     
