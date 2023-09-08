@@ -2,6 +2,7 @@
 from src.physionet_dataset import PhysioNetDataset
 from src.model.tess_pretraining import PreTESS
 from torch.utils.data import DataLoader
+import torch.nn as nn
 import os
 
 
@@ -11,10 +12,11 @@ freq='1H'
 # %%
 
 model = PreTESS(
-    ts_dim=36, time_embedding_dim=128,
-    ts_encoder_hidden_size=128, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
-    n_heads=8,
-    prob_mask=0.15
+    ts_dim=36, time_embedding_dim=512, static_dim=5,
+    ts_encoder={'shape': [36, 256, 256, 512], 'dropout': 0.1},
+    time_embedding={'shape' : [1, int(512 ** 0.5), 512]},
+    static_feature_encoder={'shape' : [5,512], 'dropout': 0.1, 'last_layer_activation': nn.Identity},
+    mha={'num_layers' : 4, 'n_heads': 8, 'dropout': 0.1},
 )
 
 

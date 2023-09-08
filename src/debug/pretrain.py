@@ -6,6 +6,7 @@ import os
 #import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 import torch
+from torch import nn
 from pytorch_lightning.loggers import TensorBoardLogger
 
 logger = TensorBoardLogger("tb_logs", name="my_model")
@@ -31,11 +32,13 @@ if __name__ == "__main__":
                 
     model = PreTESS(
         dataset=lab,
-        ts_dim=36, time_embedding_dim=2048,
-        ts_encoder_hidden_size=2048, ts_encoder_num_layers=2, ts_encoder_dropout=0.2,
-        n_heads=8,
-        prob_mask=0.5
+        ts_dim=36, time_embedding_dim=256, static_dim=5,
+        ts_encoder={'shape': [72, 128, 128, 256], 'dropout': 0.1},
+        time_embedding={'shape' : [1, int(256 ** 0.5), 256]},
+        static_feature_encoder={'shape' : [5,256], 'dropout': 0.1, 'last_layer_activation': nn.Identity},
+        mha={'num_layers' : 4, 'n_heads': 8, 'dropout': 0.1},
     )
+
 
     # %%
     collate_fn = CollateFn(device=lab.device)

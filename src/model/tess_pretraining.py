@@ -13,9 +13,11 @@ from pytorch_lightning.utilities import grad_norm
 class PreTESS(pl.LightningModule):
     def __init__(
             self, dataset,
-            ts_dim, time_embedding_dim,
-            ts_encoder_hidden_size=128, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
-            n_heads=8,
+            ts_dim, time_embedding_dim, static_dim,
+            ts_encoder={'shape': [], 'dropout': 0.1}, 
+            time_embedding={'shape' : []}, 
+            static_feature_encoder={'shape' : [], 'dropout': 0.1, 'last_layer_activation': nn.Identity}, 
+            mha={'num_layers' : 4, 'n_heads': 8, 'dropout': 0.1},
             prob_mask=0.15,
             alpha = 0.2,
     ) -> None:
@@ -26,9 +28,11 @@ class PreTESS(pl.LightningModule):
 
         self.tess = Tess(
             dataset,
-            ts_dim, time_embedding_dim,
-            ts_encoder_hidden_size, ts_encoder_num_layers, ts_encoder_dropout,
-            n_heads
+            ts_dim, time_embedding_dim, static_dim,
+            ts_encoder=ts_encoder, 
+            time_embedding=time_embedding,
+            static_feature_encoder=static_feature_encoder, 
+            mha=mha
         )
 
         D = self.dataset.ts_dim
@@ -88,8 +92,11 @@ class PreTESS(pl.LightningModule):
         is_masked = self.select_random_timesteps((B,T))
         is_masked_float = is_masked.float().unsqueeze(-1)
 
-        # B x T x D_emb
-        x_hat = self.tess(lab, timesteps, is_masked_float, self.mask)
+        # B x (T + 1) x D_emb
+        x_hat = self.tess(lab, pid, timesteps, is_masked_float, self.mask)
+        # B x T x D
+        x_hat = x_hat[:,:-1,:] # we do not predict static features
+
         vals_pred, spm_pred = self.head(x_hat)
         
         #x_rec = x_rec * mask

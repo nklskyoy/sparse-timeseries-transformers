@@ -1,25 +1,19 @@
 from torch import nn
 import torch
 
-def make_dense(input_size, hidden_size, output_size, num_layers, dropout=0., activation=nn.ReLU, last_layer_activation=nn.ReLU):
+def make_dense(shape, dropout=0., activation=nn.ReLU, last_layer_activation=nn.ReLU):
+    if len(shape) < 2:
+        return None
+    
     layers = []
-    input_dim = input_size
 
-    for _ in range(num_layers):
+    num_layers = len(shape) - 1
+    source_size = shape[0]
 
-        if _ == 0:
-            source_size = input_size
-        else:
-            source_size = hidden_size
-
-        if _ == num_layers - 1:
-            target_size = output_size
-        else:
-            target_size = hidden_size
-
-
-        layers.append(nn.Linear(source_size, target_size))
-        if _ != num_layers - 1:
+    for i in range(num_layers):
+        layers.append(nn.Dropout(dropout))
+        layers.append(nn.Linear(shape[i], shape[i+1]))
+        if i != num_layers - 1:
             layers.append(activation())
         else:
             layers.append(last_layer_activation())
@@ -48,9 +42,9 @@ class MHA(nn.Module):
     def __init__(self, input_size, rep_size, n_heads, dropout=0.1):
         super(MHA, self).__init__()
         
-        self.q = make_dense(input_size, rep_size, rep_size, 1, dropout=dropout)
-        self.k = make_dense(input_size, rep_size, rep_size, 1, dropout=dropout)
-        self.v = make_dense(input_size, rep_size, rep_size, 1, dropout=dropout)
+        self.q = make_dense(shape=[input_size, rep_size], dropout=dropout)
+        self.k = make_dense(shape=[input_size, rep_size], dropout=dropout)
+        self.v = make_dense(shape=[input_size, rep_size], dropout=dropout)
 
         self.mha = nn.MultiheadAttention(
             embed_dim=rep_size,
@@ -59,12 +53,12 @@ class MHA(nn.Module):
             batch_first=True
         )
 
-        self.o = make_dense(rep_size, rep_size, rep_size, 1, dropout=dropout, last_layer_activation=nn.Identity)
+        self.o = make_dense( shape=[rep_size, rep_size], dropout=dropout, last_layer_activation=nn.Identity)
 
         self.layer_norm1 = nn.LayerNorm(rep_size)
         self.layer_norm2 = nn.LayerNorm(rep_size)
 
-        self.ff = make_dense(rep_size, rep_size, rep_size, 2, dropout=dropout, last_layer_activation=nn.ReLU)
+        self.ff = make_dense(shape=[rep_size, rep_size], dropout=dropout, last_layer_activation=nn.ReLU)
 
 
     def forward(self, x, mask=None):

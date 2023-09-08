@@ -2,19 +2,13 @@ from torch import nn
 from src.model.model_util import make_dense
 
 class MLPTSencoder(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers, dropout):   
+    def __init__(self, shape, dropout):   
         super(MLPTSencoder, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
+        self.shape = shape
         self.dropout = dropout
 
         self.dense = make_dense(
-            input_size*2, 
-            hidden_size, 
-            output_size, 
-            num_layers, 
+            shape,
             dropout=dropout, 
             activation=nn.ReLU
         )
@@ -34,20 +28,14 @@ class MLPTSencoder(nn.Module):
 
 
 class TimeEmbedding(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, shape):
         super(TimeEmbedding, self).__init__()
-        self.input_size = 1
-        self.hidden_size = int(dim ** 0.5)
-        self.num_layers = 1
-        self.output_size = dim
+        self.shape = shape
 
         self.dense = make_dense(
-            self.input_size, 
-            self.hidden_size, 
-            self.output_size, 
-            self.num_layers, 
+            shape,
             dropout=0., 
-            activation=nn.Tanh()
+            activation=nn.Tanh
         )
 
 
