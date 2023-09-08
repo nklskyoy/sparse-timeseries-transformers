@@ -5,6 +5,8 @@ import pandas as pd
 import glob 
 import os
 import torch 
+import pickle
+
 
 
 class CollateFn:
@@ -109,6 +111,23 @@ class PhysioNetDataset(Dataset):
             # adjust Time column such that every timeseries starts with 0:00:00
             lab['Time'] = lab.groupby('ID')['Time'].transform(lambda x: x - x.min())
 
+            columns_to_normalize = [col for col in lab.columns if col not in ['ID', 'Time']]
+
+            mean_std_values = {}  # Dictionary to save mean and std for each column
+
+            for col in columns_to_normalize:
+                # Compute mean and std ignoring NaNs
+                mean_value = lab[col].mean(skipna=True)
+                std_value = lab[col].std(skipna=True)
+
+                # Store mean and std values
+                mean_std_values[col] = {'mean': mean_value, 'std': std_value}
+
+                # Normalize the column
+                lab[col] = (lab[col] - mean_value) / std_value
+
+
+
             # save attributes
             self.lab_x = lab.drop(['ID', 'Time'], axis=1).to_numpy()
             self.lab_index = lab[['ID']].to_numpy().reshape(-1)
@@ -118,6 +137,12 @@ class PhysioNetDataset(Dataset):
             self.pid_features = pid.columns.values[1:]
 
             os.makedirs(data_path)
+
+            # save mean and std values
+            with open(os.path.join(data_path, 'mean_std_values.pkl'), 'wb') as file:
+                pickle.dump(mean_std_values, file)  
+
+
             np.savez(
                 os.path.join(data_path, 'data.npz'), 
                 lab_x=self.lab_x,
@@ -128,7 +153,7 @@ class PhysioNetDataset(Dataset):
                 pid_features=self.pid_features,
             )
         
-        # for convenience
+        # for convenience   
         self.unique_id = np.unique(self.lab_index)
         self.ts_dim = self.lab_x.shape[1]
 

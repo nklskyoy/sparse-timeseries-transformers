@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "normalize",
+            "type": "python",
+            "request": "launch",
+            "module": "src.debug.normalize",
+            "justMyCode": true
+        },
+        {
             "name": "pretrain",
             "type": "python",
             "request": "launch",
