@@ -69,6 +69,7 @@ class PreTESS(pl.LightningModule):
 
         return is_masked.to(self.dataset.device)
 
+
     def on_before_optimizer_step(self, optimizer):
         # Compute the 2-norm for each layer
         # If using mixed precision, the gradients are already unscaled here
@@ -77,7 +78,8 @@ class PreTESS(pl.LightningModule):
         norms = grad_norm(self.head, norm_type=2)
         self.log_dict(norms)
 
-    def training_step(self, batch, batch_idx):
+
+    def step(self, batch):
         # batch: B x T x 2 x D
         lab = batch[0]
         pid = batch[1]
@@ -110,11 +112,21 @@ class PreTESS(pl.LightningModule):
         loss_per_pat = loss_per_bin.sum(dim=-1) /is_masked.sum(-1)
 
         loss = loss_per_pat.mean()
-        
-        #loss = self.head(x_hat, y)
+        return loss
+
+
+    def training_step(self, batch, batch_idx):
+        loss = self.step(batch)
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
+
+    def validation_step(self, batch, batch_idx):
+        loss = self.step(batch)
+        self.log('valid_loss', loss, on_epoch=True, prog_bar=True, logger=True)
+        return loss
+
+
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, weight_decay=1e-6)
         return optimizer 

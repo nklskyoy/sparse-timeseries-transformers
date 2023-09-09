@@ -31,13 +31,24 @@
             "weight_decay" : 1e-6
         },
         "dataset": {
-            "root_path" : {
-                "raw" : "data/physionet.org/files/set-a",
-                "data": "data/physionet.org"
+            "train" : {
+                "root_path" : {
+                    "raw" : "data/physionet.org/files/set-a",
+                    "data": "data/physionet.org"
+                },
+                "dataset_name": "set-a",
+                "freq" : "1H",
+                "write_to_disk": false
             },
-            "dataset_name": "set-a",
-            "freq" : "1H",
-            "write_to_disk": false
+            "val" : {
+                "root_path" : {
+                    "raw" : "data/physionet.org/files/set-a",
+                    "data": "data/physionet.org"
+                },
+                "dataset_name": "set-b",
+                "freq" : "1H",
+                "write_to_disk": false
+            }
         }
 
 }
