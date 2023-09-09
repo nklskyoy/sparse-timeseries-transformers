@@ -45,12 +45,12 @@ class CollateFn:
 
 
 class PhysioNetDataset(Dataset):
-    def __init__(self, root_path, dataset_name, freq='10H', write_to_disc=False, device=torch.device('cpu')) -> None:
+    def __init__(self, root_path, dataset_name, freq='10H', write_to_disk=False, device=torch.device('cpu')) -> None:
         self.root_path = root_path
         self.device = device
 
         data_path = os.path.join(root_path['data'], "{name}_{freq}".format(name=dataset_name, freq=freq))
-        if os.path.exists(data_path) and not write_to_disc:
+        if os.path.exists(data_path) and not write_to_disk:
             # if the data is already saved, load it
             print('use saved data')
             data = np.load(os.path.join(data_path, 'data.npz'), allow_pickle=True)

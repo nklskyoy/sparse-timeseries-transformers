@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     device_name = os.getenv('DEVICE', 'cpu')
 
-    dataset_params, model_params, optimizer_params, trainer_params = parse_config('pretrain')
+    dataset_params, model_params, optimizer_params, trainer_params = parse_config('pretrain_physionet')
 
     batch_size = optimizer_params['batch_size']
 
