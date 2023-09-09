@@ -23,7 +23,7 @@ lab = PhysioNetDataset(
     },
     dataset_name='set-a',
     freq=freq,
-    write_to_disc=False
+    write_to_disk=True
 )
 
 # %%

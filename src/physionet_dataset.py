@@ -127,6 +127,14 @@ class PhysioNetDataset(Dataset):
                 lab[col] = (lab[col] - mean_value) / std_value
 
 
+            lab = lab.sort_values(['ID', 'Time'])
+
+            # try impute nan values via ffill
+            for col in columns_to_normalize:
+                # Compute mean and std ignoring NaNs
+                lab[col] = lab\
+                    .groupby('ID')[col]\
+                    .fillna(method='ffill')
 
             # save attributes
             self.lab_x = lab.drop(['ID', 'Time'], axis=1).to_numpy()
@@ -142,7 +150,7 @@ class PhysioNetDataset(Dataset):
             with open(os.path.join(data_path, 'mean_std_values.pkl'), 'wb') as file:
                 pickle.dump(mean_std_values, file)  
 
-
+            # save data as npz
             np.savez(
                 os.path.join(data_path, 'data.npz'), 
                 lab_x=self.lab_x,
