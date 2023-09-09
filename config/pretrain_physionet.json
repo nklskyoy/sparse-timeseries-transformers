@@ -1,0 +1,43 @@
+{
+        "model": {
+            "ts_dim": 36,
+            "time_embedding_dim": 256,
+            "static_dim": 5,
+            "ts_encoder": {
+                "shape": [72, 128, 128, 256],
+                "dropout": 0.1
+            },
+            "time_embedding": {
+                "shape": [1, 256, 256]
+            },
+            "static_feature_encoder": {
+                "shape": [5, 256],
+                "dropout": 0.1,
+                "last_layer_activation": "nn.Identity"
+            },
+            "mha": {
+                "num_layers": 4,
+                "n_heads": 8,
+                "dropout": 0.1
+            }
+        },
+        "trainer": {
+            "default_root_dir": "checkpoints"
+        },
+        "optimizer" : {
+            "batch_size": 512,
+            "name": "AdamW",
+            "lr": 1e-4,
+            "weight_decay" : 1e-6
+        },
+        "dataset": {
+            "root_path" : {
+                "raw" : "data/physionet.org/files/set-a",
+                "data": "data/physionet.org"
+            },
+            "dataset_name": "set-a",
+            "freq" : "1H",
+            "write_to_disk": false
+        }
+
+}

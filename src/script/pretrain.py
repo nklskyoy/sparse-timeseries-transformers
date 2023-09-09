@@ -1,4 +1,4 @@
-
+# %%
 from src.physionet_dataset import PhysioNetDataset, CollateFn
 from src.model.tess_pretraining import PreTESS
 from torch.utils.data import DataLoader
@@ -6,40 +6,38 @@ import os
 #import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 import torch
+from torch import nn
+from pytorch_lightning.loggers import TensorBoardLogger
+from src.util.general import parse_config
 
+logger = TensorBoardLogger("tb_logs", name="my_model")
 
-
-freq='1H'
-
-
+# %%
+# %%
 if __name__ == "__main__":
 
-    lab = PhysioNetDataset(
-        root_path={
-            'raw' : os.path.join('data','physionet.org','files', 'set-a'),
-            'data' : os.path.join('data','physionet.org'),
-        },
-        dataset_name='set-a',
-        freq=freq,
-        write_to_disc=False,
-        device=torch.device('mps')
-    )
+    device_name = os.getenv('DEVICE', 'cpu')
 
+    dataset_params, model_params, optimizer_params, trainer_params = parse_config('pretrain')
 
-                
-    model = PreTESS(
-        dataset=lab,
-        ts_dim=36, time_embedding_dim=2048,
-        ts_encoder_hidden_size=256, ts_encoder_num_layers=2, ts_encoder_dropout=0.1,
-        n_heads=8,
-        prob_mask=0.15
-    )
+    batch_size = optimizer_params['batch_size']
 
-    # %%
+    dataset_params['device'] = torch.device(device_name) 
+    lab = PhysioNetDataset(**dataset_params)
+    model_params['dataset'] = lab 
+    model = PreTESS( **model_params)
+
     collate_fn = CollateFn(device=lab.device)
-    dataloader = DataLoader(lab, batch_size=128, shuffle=True, num_workers=0, collate_fn=collate_fn)
-    #i = iter(dataloader)
-    #x,t = next(i)
-    # %%
-    trainer = Trainer(accelerator="mps", devices=1)
+    dataloader = DataLoader(lab, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
+
+    trainer = Trainer(
+        accelerator=device_name, 
+        devices=1, 
+        max_epochs=300, 
+        log_every_n_steps=1, 
+        logger=logger, 
+        default_root_dir=trainer_params['default_root_dir']
+    )
+
+    
     trainer.fit(model, dataloader)
