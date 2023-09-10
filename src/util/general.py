@@ -22,5 +22,6 @@ def parse_config(filename):
     dataset_params = params['dataset']
     optimizer_params = params['optimizer']
     trainer_params = params['trainer']
+    name = params['name']
 
-    return dataset_params, model_params, optimizer_params, trainer_params
+    return name, dataset_params, model_params, optimizer_params, trainer_params

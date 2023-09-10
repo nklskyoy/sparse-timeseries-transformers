@@ -5,4 +5,8 @@ reports/*
 **/__pycache__
 lightning_logs/
 tb_logs/
+checkpoints
+!checkpoints/.gitkeep
+nohup*
+
 ```

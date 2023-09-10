@@ -123,7 +123,7 @@ class PreTESS(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         loss = self.step(batch)
-        self.log('valid_loss', loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log('val_loss', loss, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
 
