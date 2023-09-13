@@ -10,8 +10,9 @@ import pickle
 
 
 class CollateFn:
-    def __init__(self, device=torch.device('cpu')) -> None:
+    def __init__(self, device=torch.device('cpu'), supervised=False) -> None:
         self.device = device
+        self.supervised = supervised
 
     def __call__(self, batch):
         device = self.device
@@ -29,6 +30,11 @@ class CollateFn:
             (len(batch), n_static_features), 0., 
             device=device)
 
+        if self.supervised == True:
+            target = torch.full(
+                (len(batch), 1), 0., 
+                device=device)
+
         T = torch.arange(max_length, device=device).unsqueeze(-1).float()
         T = T.repeat(len(batch), 1,1)
 
@@ -40,14 +46,22 @@ class CollateFn:
             lab[i, :cur_lab.shape[0],: , :] = cur_lab
             pid[i, :] = cur_pid
 
-        return lab, pid, T
+            if self.supervised == True:
+                cur_target = sequence[3]
+                target[i, :] = cur_target
+        if not self.supervised:
+            return lab, pid, T
+        else:
+            return lab, pid, T, target
 
 
 
 class PhysioNetDataset(Dataset):
-    def __init__(self, root_path, dataset_name, freq='10H', write_to_disk=False, device=torch.device('cpu')) -> None:
+    def __init__(self, root_path, dataset_name, freq='10H', write_to_disk=False, device=torch.device('cpu'), supervised=False) -> None:
         self.root_path = root_path
         self.device = device
+        self.supervised = supervised
+        self.name = dataset_name
 
         data_path = os.path.join(root_path['data'], "{name}_{freq}".format(name=dataset_name, freq=freq))
         if os.path.exists(data_path) and not write_to_disk:
@@ -84,7 +98,6 @@ class PhysioNetDataset(Dataset):
             df.loc[:,'Time'] = df.Time + ':00'
             df.loc[:,'Time'] = pd.to_timedelta(df.Time)
 
-            self.name = dataset_name
             pid = df[df.Parameter.isin(['Age', 'Gender', 'Height', 'ICUType', 'Weight', 'RecordID'])].drop_duplicates()
             pid = pid.drop(['Time','Parameter','Value'], axis=1).drop_duplicates()
             
@@ -161,6 +174,29 @@ class PhysioNetDataset(Dataset):
                 pid_features=self.pid_features,
             )
         
+
+        # load targets for supervised training
+        if supervised:
+            target_path = os.path.join(data_path, 'target.npz') 
+            if os.path.exists(data_path) and os.path.isfile(target_path) and not write_to_disk:
+                self.target = np.load(target_path, allow_pickle=True)
+                self.target = self.target['target']
+            else:
+                if 'target' in root_path:
+                    df = pd.read_csv(root_path['target'], delimiter=',')
+
+                    # 1 => death
+                    # 0 => survival
+                    df.loc[:,'target'] = 0
+                    df.loc[df.Survival > df.Length_of_stay,'target'] = 0
+                    df.loc[df.Survival == -1,'target'] = 0
+
+                    df = df[['RecordID', 'target']]
+
+                    self.target = df.to_numpy()
+                    np.savez(target_path, target=self.target)
+            
+
         # for convenience   
         self.unique_id = np.unique(self.lab_index)
         self.ts_dim = self.lab_x.shape[1]
@@ -186,10 +222,21 @@ class PhysioNetDataset(Dataset):
         # T x 2 x D
         masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
 
-        return  \
-            masked_lab.to(self.device),\
-            pid.to(self.device),\
-            torch.arange(T, device=self.device).unsqueeze(-1).float()
+        if self.supervised:
+            target = self.target[self.target[:, 0] == int(self.unique_id[idx]), 1]
+            target = from_numpy(target.astype(np.float32))
+
+            return  \
+                masked_lab.to(self.device),\
+                pid.to(self.device),\
+                torch.arange(T, device=self.device).unsqueeze(-1).float(),\
+                target.to(self.device)
+
+        else:
+            return  \
+                masked_lab.to(self.device),\
+                pid.to(self.device),\
+                torch.arange(T, device=self.device).unsqueeze(-1).float()
 
         
     def __len__(self):

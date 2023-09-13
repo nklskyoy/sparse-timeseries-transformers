@@ -59,11 +59,13 @@ class Tess(nn.Module):
         )
 
 
-    def forward(self, lab, pid, t, is_masked=None, mask=None):
+    def forward(self, lab, pid, t, is_masked=None, mask=None, rep=None):
         # x : B x T x 2 x D
         # t : B x T x 1
         # is_masked: 1. and 0. tensor of shape B x T x 1
-
+        
+        B = lab.shape[0]
+        
         # encode time series
         x = self.ts_encoder(lab)
         t = self.time_embedding(t)
@@ -79,6 +81,10 @@ class Tess(nn.Module):
 
         # concatenate time series and static features
         x = torch.cat([x, s.unsqueeze(-2)], dim=-2)
+
+        if rep is not None:
+            rep = rep.unsqueeze(0).repeat(B,1,1)
+            x = torch.cat([x, rep], dim=-2)
 
         # apply multihead attention
         x = self.mha(x)
