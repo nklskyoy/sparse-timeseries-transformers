@@ -187,7 +187,7 @@ class PhysioNetDataset(Dataset):
 
                     # 1 => death
                     # 0 => survival
-                    df.loc[:,'target'] = 0
+                    df.loc[:,'target'] = 1
                     df.loc[df.Survival > df.Length_of_stay,'target'] = 0
                     df.loc[df.Survival == -1,'target'] = 0
 

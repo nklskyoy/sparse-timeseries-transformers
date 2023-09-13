@@ -45,7 +45,7 @@ if __name__ == "__main__":
     )
 
     checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss',
+        monitor='valid_loss',
         filename=name+'-{epoch:02d}-{val_loss:.2f}',
         dirpath='checkpoints/physnet_finetune',
         save_top_k=10
