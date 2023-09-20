@@ -9,7 +9,7 @@ from src.model.model_util import make_dense
 from pytorch_lightning.utilities import grad_norm
 from src.model.tess_pretraining import PreTESS
 from torcheval.metrics import BinaryAUROC
-
+from src.util.lr_scheduler import CustomLRSchedule
 
 # model for finetuning
 
@@ -21,7 +21,9 @@ class TESSFinePhys(pl.LightningModule):
                 "shape": [256, 128, 128 , 128, 1],
                 "last_layer_activation": nn.Identity
             },
-            prob_mask=0.15
+            prob_mask=0.15,
+            scheduler = CustomLRSchedule,
+            start_lr=1e-5, max_lr=1e-4, ramp_up_epochs=200,
         ) -> None:
         
         super(TESSFinePhys, self).__init__()
@@ -36,6 +38,12 @@ class TESSFinePhys(pl.LightningModule):
         model.load_state_dict(state_dict)
 
         self.tess = model.tess
+
+        for name, module in self.tess.named_modules():
+            if isinstance(module, nn.Dropout):
+                module.p = 0.5
+
+
         self.mask = model.mask
 
         self.rep = nn.Parameter(torch.ones(1, self.time_embedding_dim))
@@ -47,6 +55,14 @@ class TESSFinePhys(pl.LightningModule):
 
         self.dataset_train = dataset_train
         self.dataset_val = dataset_val
+
+        self.scheduler = scheduler
+
+        self.start_lr=1e-5 
+        self.max_lr=1e-4
+        self.ramp_up_epochs=1000
+
+
 
 
     def select_random_timesteps(self,shape):
@@ -134,5 +150,14 @@ class TESSFinePhys(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, weight_decay=1e-2)
-        return optimizer 
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.start_lr, weight_decay=1e-2)
+        
+        if self.scheduler is not None:
+            return optimizer 
+        else:
+            scheduler = {
+                'scheduler': CustomLRSchedule(optimizer, self.start_lr, self.max_lr, self.ramp_up_epochs),
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]

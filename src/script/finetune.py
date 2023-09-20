@@ -54,7 +54,7 @@ if __name__ == "__main__":
     trainer = Trainer(
         accelerator=device_name, 
         devices=1, 
-        max_epochs=300, 
+        max_epochs=3000, 
         log_every_n_steps=1, 
         logger=logger, 
         enable_checkpointing=True,
