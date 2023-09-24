@@ -12,6 +12,13 @@
             "justMyCode": true
         },
         {
+            "name": "pretrain_physionet",
+            "type": "python",
+            "request": "launch",
+            "module": "src.script.pretrain",
+            "justMyCode": true
+        },
+        {
             "name": "supervised_physionet",
             "type": "python",
             "request": "launch",
