@@ -19,13 +19,16 @@ class CollateFn:
         # Get the max length in this batch
         max_length = max([x[0].shape[0] for x in batch])
         D = batch[0][0].shape[2]
-        
+
         n_static_features = batch[0][1].shape[1]
 
         # Create a tensor filled with NaNs
         lab = torch.full(
             (len(batch), max_length,2, D), 
             0., device=device)
+        
+        #lab[:,:,1,:] = 1. # mask
+
         pid = torch.full(
             (len(batch), n_static_features), 0., 
             device=device)
@@ -49,10 +52,13 @@ class CollateFn:
             if self.supervised == True:
                 cur_target = sequence[3]
                 target[i, :] = cur_target
+
+        seq_len = [sequence[0].shape[0] for sequence in batch]
+
         if not self.supervised:
-            return lab, pid, T
+            return lab, seq_len, pid, T
         else:
-            return lab, pid, T, target
+            return lab, seq_len, pid, T, target
 
 
 
@@ -123,6 +129,14 @@ class PhysioNetDataset(Dataset):
             
             # adjust Time column such that every timeseries starts with 0:00:00
             lab['Time'] = lab.groupby('ID')['Time'].transform(lambda x: x - x.min())
+
+            cnt = lab.groupby('ID').size()
+            cnt = pd.DataFrame(cnt)
+            cnt = cnt.rename(columns={0:'x'})
+            cnt = cnt[cnt.x > 15]
+
+            lab = lab[lab.ID.isin(cnt.index)]
+            pid = pid[pid.ID.isin(cnt.index)]
 
             columns_to_normalize = [col for col in lab.columns if col not in ['ID', 'Time']]
 

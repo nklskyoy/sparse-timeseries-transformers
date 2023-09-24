@@ -84,7 +84,7 @@ class Tess(nn.Module):
 
         if rep is not None:
             rep = rep.unsqueeze(0).repeat(B,1,1)
-            x = torch.cat([x, rep], dim=-2)
+            x = torch.cat([rep, x], dim=-2)
 
         # apply multihead attention
         x = self.mha(x)

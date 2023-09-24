@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     name, dataset_params, model_params, optimizer_params, trainer_params = parse_config('pretrain_physionet')
 
-    device_name = os.getenv('DEVICE', 'cpu')
+    device_name = os.getenv('DEVICE', 'cuda')
     logger = TensorBoardLogger("tb_logs", name=name)
     
     train_data_params = dataset_params['train']
@@ -39,18 +39,20 @@ if __name__ == "__main__":
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         filename=name+'-{epoch:02d}-{val_loss:.2f}',
-        dirpath='checkpoints',
+        dirpath='checkpoints/physnet_pretrain',
         save_top_k=10
     )
 
     trainer = Trainer(
+        deterministic=True,
         accelerator=device_name, 
         devices=1, 
         max_epochs=300, 
         log_every_n_steps=1, 
         logger=logger, 
         enable_checkpointing=True,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
+        overfit_batches=10
     )
     
     trainer.fit(model, loader_train, loader_val)

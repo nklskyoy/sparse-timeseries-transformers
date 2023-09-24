@@ -24,8 +24,8 @@ if __name__ == "__main__":
         },
         dataset_name='set-a',
         freq=freq,
-        write_to_disc=False,
-        device=torch.device('mps')
+        write_to_disk=False,
+        device=torch.device('cpu')
     )
                 
     model = PreTESS(
@@ -41,5 +41,5 @@ if __name__ == "__main__":
     collate_fn = CollateFn(device=lab.device)
     dataloader = DataLoader(lab, batch_size=128, shuffle=True, num_workers=0, collate_fn=collate_fn)
 
-    trainer = Trainer(accelerator="mps", devices=1, max_epochs=300, log_every_n_steps=1, logger=logger)
+    trainer = Trainer(accelerator="cpu", devices=1, max_epochs=300, log_every_n_steps=1, logger=logger)
     trainer.fit(model, dataloader)
