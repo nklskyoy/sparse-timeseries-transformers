@@ -19,7 +19,7 @@
             "mha": {
                 "num_layers": 4,
                 "n_heads": 8,
-                "dropout": 0.1
+                "dropout": 0.2
             }
         },
         "trainer": {
@@ -43,7 +43,7 @@
             },
             "val" : {
                 "root_path" : {
-                    "raw" : "data/physionet.org/files/set-a",
+                    "raw" : "data/physionet.org/files/set-b",
                     "data": "data/physionet.org"
                 },
                 "dataset_name": "set-b",
