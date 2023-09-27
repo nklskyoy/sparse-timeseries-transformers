@@ -154,14 +154,34 @@ class PhysioNetDataset(Dataset):
                 lab[col] = (lab[col] - mean_value) / std_value
 
 
-            lab = lab.sort_values(['ID', 'Time'])
+            for col in columns_to_normalize:
+                new_col = col+'_mask'
+                # Compute mean and std ignoring NaNs
+                lab[new_col] = 1
+                lab.loc[lab[col].isna(),new_col] = 0
+            
 
-            # try impute nan values via ffill
+            for col in columns_to_normalize:
+                # Compute mean and std ignoring NaNs
+                lab[col] = lab\
+                    .sort_values('Time')\
+                    .groupby('ID')[col]\
+                    .fillna(method='ffill')\
+                    .fillna(method='bfill')
+
             for col in columns_to_normalize:
                 # Compute mean and std ignoring NaNs
                 lab[col] = lab\
                     .groupby('ID')[col]\
-                    .fillna(method='ffill')
+                    .fillna(method='bfill')
+
+            for col in columns_to_normalize:
+                # Compute mean and std ignoring NaNs
+                lab[col] = lab[col].fillna(0)
+
+
+
+            lab = lab.sort_values(['ID', 'Time'])
 
             # save attributes
             self.lab_x = lab.drop(['ID', 'Time'], axis=1).to_numpy()
@@ -225,8 +245,6 @@ class PhysioNetDataset(Dataset):
     def __getitem__(self, idx):
         lab = self.lab_x[self.lab_index == self.unique_id[idx]] 
         lab = from_numpy(lab.astype(np.float32))
-        mask = ~lab.isnan()
-        lab[~mask] = 0
 
         pid = self.pid_x[self.pid_index == self.unique_id[idx]]
         pid = from_numpy(pid.astype(np.float32))
@@ -234,7 +252,8 @@ class PhysioNetDataset(Dataset):
         # T x 1
         T = lab.shape[0]
         # T x 2 x D
-        masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
+        masked_lab = lab.reshape(T,2,-1)
+        #torch.stack((lab, mask), dim=2).transpose(-2,-1)
 
         if self.supervised:
             target = self.target[self.target[:, 0] == int(self.unique_id[idx]), 1]

@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 # %%
 if __name__ == "__main__":
-
+    torch.multiprocessing.set_start_method('spawn')# good solution !!!!
     name, dataset_params, model_params, optimizer_params, trainer_params = parse_config('pretrain_physionet')
 
     device_name = os.getenv('DEVICE', 'cuda')
@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     batch_size = optimizer_params['batch_size']
 
-    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
-    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
+    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, collate_fn=collate_fn)
+    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=5, collate_fn=collate_fn)
     
     model_params['dataset'] = train_dataset 
     model = PreTESS( **model_params)
