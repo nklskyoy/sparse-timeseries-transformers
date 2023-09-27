@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "eopti_prepare_multiprocessing",
+            "type": "python",
+            "request": "launch",
+            "module": "src.debug.eopti_prepare_multiprocessing",
+            "justMyCode": true
+        },
+        {
             "name": "finetune_physionet",
             "type": "python",
             "request": "launch",
