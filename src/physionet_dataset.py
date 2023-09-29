@@ -140,7 +140,11 @@ class PhysioNetDataset(Dataset):
 
             columns_to_normalize = [col for col in lab.columns if col not in ['ID', 'Time']]
 
-            mean_std_values = {}  # Dictionary to save mean and std for each column
+            mean_std_values = {
+                'lab' : {},
+                'pid' : {}
+            }  # Dictionary to save mean and std for each column
+
 
             for col in columns_to_normalize:
                 # Compute mean and std ignoring NaNs
@@ -148,7 +152,8 @@ class PhysioNetDataset(Dataset):
                 std_value = lab[col].std(skipna=True)
 
                 # Store mean and std values
-                mean_std_values[col] = {'mean': mean_value, 'std': std_value}
+                mean_std_values['lab'][col] \
+                    = {'mean': mean_value, 'std': std_value}
 
                 # Normalize the column
                 lab[col] = (lab[col] - mean_value) / std_value
@@ -182,6 +187,21 @@ class PhysioNetDataset(Dataset):
 
 
             lab = lab.sort_values(['ID', 'Time'])
+
+            columns_to_normalize = [col for col in pid.columns if col not in ['ID', 'Time']]
+
+            for col in columns_to_normalize:
+                # Compute mean and std ignoring NaNs
+                mean_value = pid[col].mean(skipna=True)
+                std_value = pid[col].std(skipna=True)
+
+                # Store mean and std values
+                mean_std_values['pid'][col] \
+                    = {'mean': mean_value, 'std': std_value}
+
+                # Normalize the column
+                pid[col] = (pid[col] - mean_value) / std_value
+
 
             # save attributes
             self.lab_x = lab.drop(['ID', 'Time'], axis=1).to_numpy()
