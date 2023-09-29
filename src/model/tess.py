@@ -80,7 +80,7 @@ class Tess(nn.Module):
         s = self.static_feature_encoder(pid)
 
         # concatenate time series and static features
-        x = torch.cat([x, s.unsqueeze(-2)], dim=-2)
+        x = torch.cat([s.unsqueeze(-2), x], dim=-2)
 
         if rep is not None:
             rep = rep.unsqueeze(0).repeat(B,1,1)

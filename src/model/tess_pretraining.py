@@ -176,18 +176,22 @@ class PreTESS(pl.LightningModule):
         # B x (T + 1) x D_emb
         x_hat = self.tess(lab, pid, timesteps, is_masked_float, self.mask, self.rep)
         # B x T x D
-        x_hat = x_hat[:,1:-1,:] # we do not predict static features and rep token
+        x_hat = x_hat[:,2:,:] # we do not predict static features and rep token
 
         vals_pred, spm_pred = self.head(x_hat)
         
         #x_rec = x_rec * mask
         #m_rec = m_rec * mask
 
-        bce = self.bce(spm_pred,spm) #* is_masked_float
-        mse = (vals - vals_pred)**2 #* spm #* is_masked_float
+        bce = self.bce(spm_pred,spm) * is_masked_float
+        mse = (vals - vals_pred)**2 * spm * is_masked_float
 
-        loss =  mse + bce * self.alpha 
-        loss_per_bin = loss.mean(dim=-1)
+        bce_per_bin = bce.mean(dim=-1)
+        mse_per_bin = mse.mean(-1)
+        loss_per_bin = mse_per_bin + bce_per_bin * self.alpha
+
+#       loss =  mse + bce * self.alpha 
+#       loss_per_bin = loss.mean(dim=-1)
         loss_per_pat = loss_per_bin.sum(dim=-1) /is_masked.sum(-1)
 
         loss = loss_per_pat.mean()
