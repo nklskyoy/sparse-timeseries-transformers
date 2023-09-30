@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import BCELoss, BCEWithLogitsLoss
 from src.model.tess import Tess, PredictHead
 from pytorch_lightning.utilities import grad_norm
-
+from src.util.lr_scheduler import CustomLRSchedule
 
 
 
@@ -20,6 +20,7 @@ class PreTESS(pl.LightningModule):
             mha={'num_layers' : 4, 'n_heads': 8, 'dropout': 0.1},
             prob_mask=0.5,
             alpha = 0.2,
+            start_lr=1e-5 , max_lr=1e-4, ramp_up_epochs=100
     ) -> None:
         
         super(PreTESS, self).__init__()
@@ -48,6 +49,12 @@ class PreTESS(pl.LightningModule):
         )
 
         self.bce = BCEWithLogitsLoss(reduction='none')
+
+        self.start_lr=start_lr
+        self.max_lr=max_lr
+        self.ramp_up_epochs=ramp_up_epochs
+
+        self.scheduler = CustomLRSchedule
 
 
 
@@ -214,5 +221,14 @@ class PreTESS(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4, weight_decay=1e-6)
-        return optimizer 
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.start_lr, weight_decay=1e-2)
+        
+        if self.scheduler is not None:
+            return optimizer 
+        else:
+            scheduler = {
+                'scheduler': CustomLRSchedule(optimizer, self.start_lr, self.max_lr, self.ramp_up_epochs),
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]

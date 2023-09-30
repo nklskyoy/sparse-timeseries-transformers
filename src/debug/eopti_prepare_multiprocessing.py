@@ -42,8 +42,14 @@ def chunk_fn(chunk_root,freq='1H'):
 
         chunk['Time'] = chunk.groupby('id')['Time'].transform(lambda x: x - x.min())
         chunk_path = os.path.join(chunk_root, f"chunk_{chunk_num}.npz")
+        
+        unique_ids = chunk['id'].unique()
+        for uid in unique_ids:
+            subset = chunk[chunk['id'] == uid].sort_values(by='Time')
+            subset = subset.drop(['id', 'Time'],axis=1)
+            chunk_path = os.path.join(chunk_root, f"{uid}.npz")
+            np.savez(chunk_path, subset.to_numpy())
 
-        np.savez(chunk_path, chunk.to_numpy())
         return chunk
 
     return process_chunk
@@ -84,7 +90,26 @@ def prepare_and_wite_interim_lab(disease, label, freq, base_path):
 
     lab = lab.drop(['y_date'],axis=1)
     lab = lab.rename(columns={'x_date':'Time'})
-                     
+
+    columns_to_normalize = [col for col in lab.columns if col not in ['id', 'Time']]
+    print(columns_to_normalize)
+    mean_std_values = {
+        'lab' : {},
+    }  # Dictionary to save mean and std for each column
+
+
+    for col in columns_to_normalize:
+        # Compute mean and std ignoring NaNs
+        mean_value = lab[col].mean(skipna=True)
+        std_value = lab[col].std(skipna=True)
+
+        # Store mean and std values
+        mean_std_values['lab'][col] \
+            = {'mean': mean_value, 'std': std_value}
+
+        # Normalize the column
+        lab[col] = (lab[col] - mean_value) / std_value
+                    
     lab.loc[:,'Time'] = pd.to_datetime(lab['Time'])
 
     grouped = lab.groupby('id').agg(timeseries_length=('Time', lambda x: x.max() - x.min()))
@@ -105,6 +130,8 @@ def prepare_and_wite_interim_lab(disease, label, freq, base_path):
     if not os.path.exists(labeled_dir):
         os.makedirs(labeled_dir)
 
+    with open(os.path.join(labeled_dir, 'lab_mean_std_values.pkl'), 'wb') as file:
+            pickle.dump(mean_std_values, file)  
 
     # save id_map
     with open(os.path.join(labeled_dir, 'id_map.json'), 'w') as fp:

@@ -31,7 +31,7 @@ class TESSFinePhys(pl.LightningModule):
         self.time_embedding_dim = sst_config['time_embedding_dim']
         self.prob_mask = prob_mask
 
-        sst_model_path = 'checkpoints/pretrain_physionet_m_adamw_nosche-epoch=299-val_loss=1.59.ckpt'
+        #sst_model_path = 'checkpoints/pretrain_physionet_m_adamw_nosche-epoch=299-val_loss=1.59.ckpt'
         state_dict = torch.load(sst_model_path)
         state_dict = state_dict['state_dict']
         model = PreTESS( **sst_config)
@@ -46,10 +46,13 @@ class TESSFinePhys(pl.LightningModule):
 
         self.mask = model.mask
 
-        self.rep = nn.Parameter(torch.ones(1, self.time_embedding_dim))
+        self.rep = model.rep
 
         self.head = make_dense(**supervised_predict_head)
-        self.bce = BCEWithLogitsLoss(reduction='none')
+        self.bce = BCEWithLogitsLoss(
+            reduction='none', 
+            pos_weight=torch.tensor([7.14]).to(dataset_train.device)
+        )
 
         self.auroc = BinaryAUROC()
 
@@ -61,6 +64,8 @@ class TESSFinePhys(pl.LightningModule):
         self.start_lr=1e-5 
         self.max_lr=1e-4
         self.ramp_up_epochs=1000
+
+        self.mask_prob = 0.2
 
 
 
@@ -86,6 +91,45 @@ class TESSFinePhys(pl.LightningModule):
         return is_masked.to(self.dataset_train.device)
 
 
+    def create_mask(self,seq_len, T):
+            
+            seq_len = torch.tensor(seq_len)
+            seq_len = seq_len.to(self.dataset_train.device)
+            seq_len = seq_len.long()
+
+            B = seq_len.size(0)
+
+            # Expand sequence lengths to a 2D tensor (B, T) where each row contains the sequence length repeated
+            expanded_lengths = seq_len.unsqueeze(1).expand(-1, T)
+
+            # Create a tensor of range values (0 to T-1) for each sequence in the batch
+            range_tensor = torch.arange(T, device=seq_len.device).expand_as(expanded_lengths)
+
+            # Create a mask to identify valid positions in each sequence (before padding)
+            valid_positions = range_tensor < expanded_lengths
+
+            # Generate random values for each sequence
+            random_vals = torch.rand_like(range_tensor.float())
+            max_vals = random_vals.amax(-1)
+            max_vals = max_vals.unsqueeze(1).expand(-1, T)
+            fill = torch.arange(T, device=seq_len.device).unsqueeze(1).expand(-1, B).T  < expanded_lengths
+            fill = ~fill
+            random_vals[fill] = max_vals[fill]
+
+            # Find the threshold value for each sequence that will mask 50% of its values
+            _, sorted_indices = random_vals.sort(dim=-1, descending=False)
+            half_lengths = (seq_len * self.mask_prob).int()
+            threshold_indices = half_lengths.unsqueeze(1).expand(-1, T) - 1
+            thresholds = torch.gather(random_vals, 1, sorted_indices).gather(1, threshold_indices.long()).expand(-1, T)
+
+            valid_positions = torch.gather(valid_positions, 1, sorted_indices)
+
+            # Generate mask using the computed thresholds
+            mask = (random_vals <= thresholds)
+
+            return mask
+
+
     def on_before_optimizer_step(self, optimizer):
         # Compute the 2-norm for each layer
         # If using mixed precision, the gradients are already unscaled here
@@ -97,20 +141,20 @@ class TESSFinePhys(pl.LightningModule):
 
     def step(self, batch):
         lab = batch[0]
-        pid = batch[1]
-        timesteps = batch[2]
-        target = batch[3]
+        seq_len = batch[1]
+        pid = batch[2]
+        timesteps = batch[3]
 
         B,T,_,_ = lab.shape
 
         # True if masked
-        is_masked = self.select_random_timesteps((B,T))
+        is_masked = self.create_mask(seq_len, T)
         is_masked_float = is_masked.float().unsqueeze(-1)
 
         # B x (T + 1) x D_emb
         x_hat = self.tess(lab, pid, timesteps, is_masked_float, self.mask, self.rep)
         # B x 1 x D
-        rep_hat = x_hat[:,-1,:]
+        rep_hat = x_hat[:,0,:]
 
         # B x 1
         pred = self.head(rep_hat)
@@ -121,7 +165,7 @@ class TESSFinePhys(pl.LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        target = batch[3]
+        target = batch[4]
 
         pred = self.step(batch)
         bce = self.bce(pred,target) #* is_masked_float
@@ -133,7 +177,7 @@ class TESSFinePhys(pl.LightningModule):
     
 
     def validation_step(self, batch, batch_idx):
-        target = batch[3]
+        target = batch[4]
 
         pred = self.step(batch)
         bce = self.bce(pred,target) #* is_masked_float

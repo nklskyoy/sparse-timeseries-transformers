@@ -1,5 +1,5 @@
 {
-        "name" : "pretrain_physionet_m_adamw_nosche",
+        "name" : "pretrain_physionet_m_adamw",
         "model": {
             "ts_dim": 36,
             "time_embedding_dim": 256,

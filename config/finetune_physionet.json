@@ -1,5 +1,5 @@
 {
-    "name" : "finetune_physionet_m_adamw_nosche",
+    "name" : "finetune_physionet_m_adamw_lin_warmup",
     "model": {
         "ts_dim": 36,
         "time_embedding_dim": 256,

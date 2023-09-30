@@ -13,7 +13,7 @@ from src.model.tess_finetuning_physionet import TESSFinePhys
 
 
 if __name__ == "__main__":
-
+    torch.multiprocessing.set_start_method('spawn')# good solution !!!!
     name, dataset_params, model_params, optimizer_params, trainer_params = parse_config('finetune_physionet')
 
     device_name = os.getenv('DEVICE', 'cpu')
@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     batch_size = optimizer_params['batch_size']
 
-    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
-    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
+    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
+    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
     
     supervised_head_params = model_params['supervised_predict_head']
     model_params['dataset'] = train_dataset 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     model = TESSFinePhys(
         dataset_train=train_dataset,
         dataset_val=val_dataset,
-        sst_model_path='checkpoints/pretrain_physionet_m_adamw_nosche-epoch=299-val_loss=1.59.ckpt',
+        sst_model_path='checkpoints/physnet_pretrain/pretrain_physionet_m_adamw-epoch=347-val_loss=0.18.ckpt',
         sst_config=model_params
     )
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     trainer = Trainer(
         accelerator=device_name, 
         devices=1, 
-        max_epochs=3000, 
+        max_epochs=600, 
         log_every_n_steps=1, 
         logger=logger, 
         enable_checkpointing=True,

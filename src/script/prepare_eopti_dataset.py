@@ -49,10 +49,15 @@ def chunk_fn(chunk_root,freq='1H'):
             .reset_index()
 
         chunk['Time'] = chunk.groupby('ID')['Time'].transform(lambda x: x - x.min())
-        chunk_path = os.path.join(chunk_root, f"chunk_{chunk_num}.npz")
 
-        np.savez(chunk_path, chunk.to_numpy())
+        unique_ids = chunk['ID'].unique()
+        for uid in unique_ids:
+            subset = chunk[chunk['ID'] == uid].sort_values(by='Time')
+            chunk_path = os.path.join(chunk_root, f"chunk_{chunk_num}_id_{uid}.npz")
+            np.savez(chunk_path, subset.to_numpy())
+
         return chunk
+
 
     return process_chunk
 

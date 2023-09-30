@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     batch_size = optimizer_params['batch_size']
 
-    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5, collate_fn=collate_fn)
-    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=5, collate_fn=collate_fn)
+    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
+    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
     
     model_params['dataset'] = train_dataset 
     model = PreTESS( **model_params)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         deterministic=True,
         accelerator=device_name, 
         devices=1, 
-        max_epochs=300, 
+        max_epochs=350, 
         log_every_n_steps=1, 
         logger=logger, 
         enable_checkpointing=True,
