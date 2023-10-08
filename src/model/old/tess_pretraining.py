@@ -7,6 +7,7 @@ from torch.nn import BCELoss, BCEWithLogitsLoss
 from src.model.tess import Tess, PredictHead
 from pytorch_lightning.utilities import grad_norm
 from src.util.lr_scheduler import CustomLRSchedule
+import math
 
 
 
@@ -37,8 +38,12 @@ class PreTESS(pl.LightningModule):
         )
 
         D = self.dataset.ts_dim
-        self.mask = nn.Parameter(torch.ones(time_embedding_dim, 1))
-        self.rep = nn.Parameter(torch.ones(1, time_embedding_dim))
+
+        # He initialization
+        stdv = math.sqrt(2. / time_embedding_dim)
+        self.mask = nn.Parameter(torch.randn(time_embedding_dim, 1) * stdv)
+
+        self.rep = nn.Parameter(torch.randn(1, time_embedding_dim) * stdv)
 
         self.prob_mask = prob_mask
         
@@ -55,34 +60,6 @@ class PreTESS(pl.LightningModule):
         self.ramp_up_epochs=ramp_up_epochs
 
         self.scheduler = CustomLRSchedule
-
-
-
-
-    def create_mask_fix(self, seq_len, T):
-        # Create a tensor of range values (0 to T-1) for each sequence in the batch
-        range_tensor = torch.arange(T, device=seq_len.device).expand(seq_len.size(0), -1)
-        
-        # Create a mask to identify valid positions in each sequence (before padding)
-        valid_positions = range_tensor < seq_len.unsqueeze(1)
-        
-        # Determine the number of events to mask for each sequence
-        half_lengths = (seq_len / 2).int()
-        
-        # Create a tensor of ones and zeros for masking
-        mask_values = torch.cat([torch.ones(half_lengths.sum().item(), dtype=torch.bool, device=seq_len.device),
-                                torch.zeros((seq_len - half_lengths).sum().item(), dtype=torch.bool, device=seq_len.device)])
-
-        # Determine how many times each sequence should be repeated for reshuffling
-        repeats = torch.repeat_interleave(seq_len, dim=0)
-        
-        # Shuffle each sequence's mask values independently
-        shuffled_mask = torch.repeat_interleave(mask_values[torch.randperm(mask_values.size(0))], repeats=repeats).view(seq_len.size(0), T)
-
-        # Ensure the mask is applied only to valid positions (before padding)
-        mask = shuffled_mask & valid_positions
-
-        return mask
 
 
 

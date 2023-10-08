@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "pl_finetune",
+            "type": "python",
+            "request": "launch",
+            "module": "src.script.pl_finetune",
+            "justMyCode": true
+        },
+        {
+            "name": "pl_pretrain",
+            "type": "python",
+            "request": "launch",
+            "module": "src.debug.pl_pretrain",
+            "justMyCode": true
+        },
+        {
             "name": "eopti_prepare_multiprocessing",
             "type": "python",
             "request": "launch",

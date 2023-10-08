@@ -6,6 +6,49 @@ from torch.nn.functional import sigmoid,tanh
 
 
 
+
+
+def create_mask(seq_len, T, device):
+        seq_len = torch.tensor(seq_len)
+        seq_len = seq_len.to(device)
+        seq_len = seq_len.long()
+
+        B = seq_len.size(0)
+
+        # Expand sequence lengths to a 2D tensor (B, T) where each row contains the sequence length repeated
+        expanded_lengths = seq_len.unsqueeze(1).expand(-1, T)
+
+        # Create a tensor of range values (0 to T-1) for each sequence in the batch
+        range_tensor = torch.arange(T, device=seq_len.device).expand_as(expanded_lengths)
+
+        # Create a mask to identify valid positions in each sequence (before padding)
+        valid_positions = range_tensor < expanded_lengths
+
+        # Generate random values for each sequence
+        random_vals = torch.rand_like(range_tensor.float())
+        max_vals = random_vals.amax(-1)
+        max_vals = max_vals.unsqueeze(1).expand(-1, T)
+        fill = torch.arange(T, device=seq_len.device).unsqueeze(1).expand(-1, B).T  < expanded_lengths
+        fill = ~fill
+        random_vals[fill] = max_vals[fill]
+
+        # Find the threshold value for each sequence that will mask 50% of its values
+        _, sorted_indices = random_vals.sort(dim=-1, descending=False)
+        half_lengths = (seq_len / 2).int()
+        threshold_indices = half_lengths.unsqueeze(1).expand(-1, T) - 1
+        thresholds = torch.gather(random_vals, 1, sorted_indices).gather(1, threshold_indices.long()).expand(-1, T)
+
+        valid_positions = torch.gather(valid_positions, 1, sorted_indices)
+
+        # Generate mask using the computed thresholds
+        mask = (random_vals <= thresholds)
+
+        return mask
+
+
+
+
+
 class PredictHead(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(PredictHead, self).__init__()

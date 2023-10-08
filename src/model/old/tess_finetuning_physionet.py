@@ -9,20 +9,22 @@ from src.model.model_util import make_dense
 from pytorch_lightning.utilities import grad_norm
 from src.model.tess_pretraining import PreTESS
 from torcheval.metrics import BinaryAUROC
-from src.util.lr_scheduler import CustomLRSchedule
+from src.util.lr_scheduler import CustomLRSchedule, CyclicLRWithRestarts
 
 # model for finetuning
 
 class TESSFinePhys(pl.LightningModule):
     def __init__(
-            self, dataset_train, dataset_val,
+            self, cofig_optimizer_fn,
+            batch_size,
+            dataset_train, dataset_val,
             sst_model_path, sst_config, 
             supervised_predict_head= {
                 "shape": [256, 128, 128 , 128, 1],
                 "last_layer_activation": nn.Identity
             },
             prob_mask=0.15,
-            scheduler = CustomLRSchedule,
+            scheduler = CyclicLRWithRestarts,
             start_lr=1e-5, max_lr=1e-4, ramp_up_epochs=200,
         ) -> None:
         
@@ -36,6 +38,9 @@ class TESSFinePhys(pl.LightningModule):
         state_dict = state_dict['state_dict']
         model = PreTESS( **sst_config)
         model.load_state_dict(state_dict)
+
+
+        self.batch_size = batch_size
 
         self.tess = model.tess
 
@@ -63,10 +68,12 @@ class TESSFinePhys(pl.LightningModule):
 
         self.start_lr=1e-5 
         self.max_lr=1e-4
-        self.ramp_up_epochs=1000
+        self.ramp_up_epochs=200
 
         self.mask_prob = 0.2
 
+
+        self.cofig_optimizer_fn = cofig_optimizer_fn
 
 
 
@@ -194,13 +201,18 @@ class TESSFinePhys(pl.LightningModule):
 
 
     def configure_optimizers(self):
+        return self.cofig_optimizer_fn(self.parameters())
+
+
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.start_lr, weight_decay=1e-2)
         
         if self.scheduler is not None:
             return optimizer 
         else:
             scheduler = {
-                'scheduler': CustomLRSchedule(optimizer, self.start_lr, self.max_lr, self.ramp_up_epochs),
+                'scheduler': CyclicLRWithRestarts(
+                    self.batch_size,
+                    optimizer, self.start_lr, self.max_lr, self.ramp_up_epochs),
                 'interval': 'epoch',
                 'frequency': 1,
             }

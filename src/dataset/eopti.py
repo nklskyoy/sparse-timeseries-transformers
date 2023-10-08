@@ -57,62 +57,57 @@ class CollateFn:
 
 
 class EoptiDataset(Dataset):
-    def __init__(self, root_path, dataset_name, freq='10H', write_to_disk=False, device=torch.device('cpu'), supervised=False) -> None:
+    def __init__(self, root_path, dataset_name, freq='10H', device=torch.device('cpu'), supervised=False) -> None:
         self.root_path = root_path
         self.device = device
         self.supervised = supervised
         self.name = dataset_name
 
         data_path = os.path.join(root_path['data'], "{name}_{freq}".format(name=dataset_name, freq=freq))
-        if os.path.exists(data_path) and not write_to_disk:
-            # if the data is already saved, load it
-            print('use saved data')
-            data = np.load(os.path.join(data_path, 'data.npz'), allow_pickle=True)
-            
-            self.lab_x=data['lab_x']
-            self.lab_index=data['lab_index']
-            self.lab_features=data['lab_features']
-            self.pid_x=data['pid_x']
-            self.pid_index=data['pid_index']
-            self.pid_features=data['pid_features']
+        if not os.path.exists(data_path):
+            pass
+        
 
-        # load targets for supervised training
-
-        # for convenience   
-        self.unique_id = np.unique(self.lab_index)
-        self.ts_dim = self.lab_x.shape[1]
-
-
+        # Gett all id's, that is list of all file names of npz files in specified directory
+        self.unique_id = np.array([os.path.basename(x).split('.')[0] for x in glob.glob(os.path.join(data_path, '*.npz'))])
 
     def __getitem__(self, idx):
-        lab = self.lab_x[self.lab_index == self.unique_id[idx]] 
-        lab = from_numpy(lab.astype(np.float32))
-        mask = ~lab.isnan()
-        lab[~mask] = 0
+         
+        # read from npz file specified by self.unique_id[idx]
+        
+        return 
+        
+        
+        
+        # self.unique_id[idx]
+        # lab = self.lab_x[self.lab_index ==] 
+        # lab = from_numpy(lab.astype(np.float32))
+        # mask = ~lab.isnan()
+        # lab[~mask] = 0
 
-        pid = self.pid_x[self.pid_index == self.unique_id[idx]]
-        pid = from_numpy(pid.astype(np.float32))
+        # pid = self.pid_x[self.pid_index == self.unique_id[idx]]
+        # pid = from_numpy(pid.astype(np.float32))
 
-        # T x 1
-        T = lab.shape[0]
-        # T x 2 x D
-        masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
+        # # T x 1
+        # T = lab.shape[0]
+        # # T x 2 x D
+        # masked_lab = torch.stack((lab, mask), dim=2).transpose(-2,-1)
 
-        if self.supervised:
-            target = self.target[self.target[:, 0] == int(self.unique_id[idx]), 1]
-            target = from_numpy(target.astype(np.float32))
+        # if self.supervised:
+        #     target = self.target[self.target[:, 0] == int(self.unique_id[idx]), 1]
+        #     target = from_numpy(target.astype(np.float32))
 
-            return  \
-                masked_lab.to(self.device),\
-                pid.to(self.device),\
-                torch.arange(T, device=self.device).unsqueeze(-1).float(),\
-                target.to(self.device)
+        #     return  \
+        #         masked_lab.to(self.device),\
+        #         pid.to(self.device),\
+        #         torch.arange(T, device=self.device).unsqueeze(-1).float(),\
+        #         target.to(self.device)
 
-        else:
-            return  \
-                masked_lab.to(self.device),\
-                pid.to(self.device),\
-                torch.arange(T, device=self.device).unsqueeze(-1).float()
+        # else:
+        #     return  \
+        #         masked_lab.to(self.device),\
+        #         pid.to(self.device),\
+        #         torch.arange(T, device=self.device).unsqueeze(-1).float()
 
         
     def __len__(self):

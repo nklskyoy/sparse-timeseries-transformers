@@ -1,64 +1,57 @@
-from src.physionet_dataset import PhysioNetDataset, CollateFn
-from src.model.tess_pretraining import PreTESS
+# %%
+from src.model.pl_finetune import PLFinetune
 from torch.utils.data import DataLoader
 import os
-#import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 import torch
-from torch import nn
 from pytorch_lightning.loggers import TensorBoardLogger
 from src.util.general import parse_config
 from pytorch_lightning.callbacks import ModelCheckpoint
-from src.model.tess_finetuning_physionet import TESSFinePhys
+from src.dataset.physionet import CollateFn
 
-
+# %%
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')# good solution !!!!
-    name, dataset_params, model_params, optimizer_params, trainer_params = parse_config('finetune_physionet')
+    config = os.getenv('NAME', "pretrain_physnet_lin_warmup")
 
-    device_name = os.getenv('DEVICE', 'cpu')
-    logger = TensorBoardLogger("tb_logs", name=name)
+    model = PLFinetune(config)
+
+    logger = TensorBoardLogger("tb_logs", name=model.name)
     
-    train_data_params = dataset_params['train']
-    val_data_params = dataset_params['val']
-    train_data_params['device'] = torch.device(device_name) 
-    val_data_params['device'] = torch.device(device_name)
-    train_dataset = PhysioNetDataset(**train_data_params)
-    val_dataset = PhysioNetDataset(**val_data_params)
-    
-    collate_fn = CollateFn(device=torch.device(device_name) , supervised=True)
+    device = torch.device(model.device_name)
 
-    batch_size = optimizer_params['batch_size']
+    collate_fn = CollateFn(device=device , supervised=True)
 
-    loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
-    loader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=3, collate_fn=collate_fn)
-    
-    supervised_head_params = model_params['supervised_predict_head']
-    model_params['dataset'] = train_dataset 
-    del model_params['supervised_predict_head']
-
-    model = TESSFinePhys(
-        dataset_train=train_dataset,
-        dataset_val=val_dataset,
-        sst_model_path='checkpoints/physnet_pretrain/pretrain_physionet_m_adamw-epoch=347-val_loss=0.18.ckpt',
-        sst_config=model_params
+    loader_train = DataLoader(
+        model.train_dataset, 
+        batch_size=model.batch_size, 
+        shuffle=True, num_workers=3, collate_fn=collate_fn
     )
 
+    loader_val = DataLoader(
+        model.val_dataset, 
+        batch_size=model.batch_size, 
+        shuffle=True, num_workers=3, collate_fn=collate_fn
+    )
+    
+
     checkpoint_callback = ModelCheckpoint(
-        monitor='valid_loss',
-        filename=name+'-{epoch:02d}-{val_loss:.2f}',
-        dirpath='checkpoints/physnet_finetune',
+        monitor='valid_auroc',
+        filename=model.name+'-{epoch:02d}-{val_loss:.2f}',
+        dirpath="checkpoints/{name}".format(name=model.name),
         save_top_k=10
     )
 
     trainer = Trainer(
-        accelerator=device_name, 
+        deterministic=True,
+        accelerator='cuda', 
         devices=1, 
         max_epochs=600, 
         log_every_n_steps=1, 
         logger=logger, 
         enable_checkpointing=True,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
+        #overfit_batches=10
     )
     
     trainer.fit(model, loader_train, loader_val)

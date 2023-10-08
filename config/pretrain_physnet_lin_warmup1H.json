@@ -1,0 +1,86 @@
+{
+    "name" : "pretrain_physionet_lin_warmup1H",
+    "model": {
+        "encoder" : {
+            "p_mask" : 0.2,
+            "d" : 36,
+            "z" : 256,
+            "s" : 5,
+            "emb_time_bin": {
+                "shape": [72, 128, 128, 256],
+                "dropout": 0.1
+            },
+            "pos_encoding": {
+                "shape": [1, 256, 256]
+            },
+            "emb_demographic": {
+                "shape": [5, 256],
+                "dropout": 0.1,
+                "last_layer_activation": "nn.Identity"
+            },
+            "mha": {
+                "n_layers": 4,
+                "input_size" : 256,
+                "rep_size" : 256,
+                "n_heads": 8,
+                "dropout": 0.2
+            }
+        },
+        "head" : {
+            "obs" : {
+                "shape": [256, 128, 128, 36],
+                "dropout": 0.1,
+                "last_layer_activation": "nn.Identity"
+            },
+            "mask" : {
+                "shape": [256, 128, 128, 36],
+                "dropout": 0.1,
+                "last_layer_activation": "nn.Tanh"
+            }
+        }
+    },
+    "trainer": {
+        "default_root_dir": "checkpoints/"
+    },
+    "optimizers" : {
+        "alpha" : 0.2,
+        "batch_size": 512,
+        "epoch_size" : 4000,
+        "optimizer" : {
+            "name": "AdamW",
+            "lr": 1e-4,
+            "weight_decay" : 1e-6
+        }, 
+        "lr_schedule" : {
+            "name" : "CyclicLRWithRestarts",
+            "start_lr":1e-5 , 
+            "max_lr" : 1e-4, 
+            "ramp_up_epochs" : 100
+        }
+    },
+    "dataset": {
+        "train" : {
+            "name" : "PhysioNet",
+            "root_path" : {
+                "raw" : "data/physionet.org/files/set-a",
+                "data": "data/physionet.org"
+            },
+            "dataset_name": "set-a",
+            "freq" : "1H",
+            "write_to_disk": false,
+            "supervised" : false
+        },
+        "val" : {
+            "name" : "PhysioNet",
+            "root_path" : {
+                "raw" : "data/physionet.org/files/set-b",
+                "data": "data/physionet.org"
+            },
+            "dataset_name": "set-b",
+            "freq" : "1H",
+            "write_to_disk": false,
+            "supervised" : false
+        }
+    }
+
+}

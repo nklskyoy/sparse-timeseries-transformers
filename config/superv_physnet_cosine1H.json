@@ -1,27 +1,34 @@
 {
-    "name" : "finetune_physionet_m_adamw_lin_warmup",
+    "name" : "finetune_cosine1H",
     "model": {
-        "ts_dim": 36,
-        "time_embedding_dim": 256,
-        "static_dim": 5,
-        "ts_encoder": {
-            "shape": [72, 128, 128, 256],
-            "dropout": 0.1
+        "load_pretrained": {
+            "checkpoint" : "checkpoints/physnet_pretrain/pretrain_physionet_lin_warmup1H-epoch=206-val_loss=0.20.ckpt"
         },
-        "time_embedding": {
-            "shape": [1, 256, 256]
+        "encoder" : {
+            "d" : 36,
+            "z" : 256,
+            "s" : 5,
+            "emb_time_bin": {
+                "shape": [72, 128, 128, 256],
+                "dropout": 0.1
+            },
+            "pos_encoding": {
+                "shape": [1, 256, 256]
+            },
+            "emb_demographic": {
+                "shape": [5, 256],
+                "dropout": 0.1,
+                "last_layer_activation": "nn.Identity"
+            },
+            "mha": {
+                "n_layers": 4,
+                "input_size" : 256,
+                "rep_size" : 256,
+                "n_heads": 8,
+                "dropout": 0.2
+            }
         },
-        "static_feature_encoder": {
-            "shape": [5, 256],
-            "dropout": 0.1,
-            "last_layer_activation": "nn.Identity"
-        },
-        "mha": {
-            "num_layers": 4,
-            "n_heads": 8,
-            "dropout": 0.5
-        },
-        "supervised_predict_head" : {
+        "head" : {
             "shape": [256, 128, 128 , 128, 1],
             "last_layer_activation": "nn.Identity"
         }
@@ -42,7 +49,9 @@
         }
     },
     "dataset": {
+        "batch_size" : 512,
         "train" : {
+            "name" : "PhysioNet",
             "root_path" : {
                 "raw" : "data/physionet.org/files/set-a",
                 "data": "data/physionet.org",
@@ -54,6 +63,7 @@
             "write_to_disk": false
         },
         "val" : {
+            "name" : "PhysioNet",
             "root_path" : {
                 "raw" : "data/physionet.org/files/set-b",
                 "data": "data/physionet.org",
