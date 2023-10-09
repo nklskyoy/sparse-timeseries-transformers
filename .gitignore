@@ -3,6 +3,8 @@ data/*
 **/__pycache__
 lightning_logs/
 tb_logs/
+reports/
+!reports/.gitkeep
 checkpoints
 !checkpoints/.gitkeep
 nohup*
