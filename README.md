@@ -1,13 +1,5 @@
 # SST-SparseTimeSeries-
 
-
-## Running experiments
-
-Download data Physionet2012 
-
-
-
-
 ## Getting started
 
 This repository is created for the seminar work for the project self-supervised transformers for sparse time series data together with Oleksandr Nikolskyy.
