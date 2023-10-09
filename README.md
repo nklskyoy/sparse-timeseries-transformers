@@ -1,6 +1,12 @@
 # SST-SparseTimeSeries-
 
 
+## Running experiments
+
+Download data Physionet2012 
+
+
+
 
 ## Getting started
 
